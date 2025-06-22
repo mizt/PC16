@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>PC16</title>
+		<meta name="robots" content="noindex, nofollow">
+		<link rel="icon" href="data:;base64,=">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			
+			* {
+				margin:0;
+				padding:0;
+				-webkit-user-select:none;
+				-moz-user-select:none;
+				-ms-user-select:none;
+			}
+			
+			body {
+				cursor:default;
+				background:#000;
+				width:100dvw;
+				height:100dvh;
+				overflow:hidden;
+			}
+			
+		</style>
+	</head>
+	<body>
+		<script src="./twgl.min.js"></script>
+		<script type="module">
+			
+			const width = 3840;
+			const height = 2160;
+			
+			const PM = [
+				[1.445341,0,0,0,0,2.569496,0,0,-0.007273,0.068874,-1,-1,0,0,-0.001,0],
+				[1.447615,0,0,0,0,2.573538,0,0,-0.006206,0.043293,-1,-1,0,0,-0.001,0],
+			];
+			
+			const E = [
+				[0,0,0],
+				[-0.209436,0.445778,0.305061],
+			];
+			
+			const T = [
+				[0,0,0],
+				[-0.582933,0.522682,0.017337],
+			];
+			
+			const mul = (a,b)=>{
+				let m = [];
+				for(var n=0; n<16; n++) {
+					m.push(
+						a[((n>>2)<<2)+0]*b[ 0+(n&3)]+
+						a[((n>>2)<<2)+1]*b[ 4+(n&3)]+
+						a[((n>>2)<<2)+2]*b[ 8+(n&3)]+
+						a[((n>>2)<<2)+3]*b[12+(n&3)]
+					);
+				}
+				return m;
+			};
+			
+			const X = (t)=>{ 
+				return [
+					1.0,0,0,0,
+					0,Math.cos(t),-Math.sin(t),0,
+					0,Math.sin(t),Math.cos(t),0,
+					0,0,0,1
+				];
+			};
+			
+			const Y = (t)=>{ 
+				return [
+					Math.cos(t),0,Math.sin(t),0,
+					0,1,0,0,
+					-Math.sin(t),0,Math.cos(t),0,
+					0,0,0,1
+				];
+			};
+			
+			const Z = (t)=>{ 
+				return [
+					Math.cos(t),-Math.sin(t),0,0,
+					Math.sin(t),Math.cos(t),0,0,
+					0,0,1,0,
+					0,0,0,1
+				];
+			};
+			
+			const setup = (PC)=> {
+				
+				console.log(PC.v);
+				
+				const canvas = document.createElement("canvas");
+				Object.assign(canvas,{width:width,height:height});
+				
+				const div = document.createElement("div");
+				Object.assign(div.style,{"display":"flex","width":"100vw","height":"100dvh"});
+				div.appendChild(canvas);
+				
+				const gl = canvas.getContext("webgl",{antialias:true});
+				twgl.addExtensionsToContext(gl);
+				
+				if(!gl.drawArraysInstanced||!gl.createVertexArray) {
+					alert("need drawArraysInstanced and createVertexArray");
+				}
+				else {
+					
+					const arrays = {};
+					Object.assign(arrays,{
+						position:[-1,-1, 0, 1,-1, 0, 1, 1, 0,-1, 1, 0],
+						indices:[0,1,2,0,2,3],
+						center:{
+							numComponents:3,
+							data:PC.v,
+							divisor:1,
+						},
+						color:{
+							numComponents:3,
+							data:PC.rgb,
+							divisor:1,
+						}
+					});
+					
+					PC.uniforms = {PM:[],TM:[]};
+					PC.program = twgl.createProgramFromSources(gl,[`
+	uniform mat4 PM;
+	uniform mat4 TM;
+				
+	attribute vec3 color;
+	attribute vec3 center;
+	attribute vec3 position;
+	
+	varying vec4 v_color;
+	
+	void main() {
+		v_color = vec4(color,1.0);//vec4(1.0,1.0,0.0,1.0);
+		vec4 c = TM*vec4(center,1);
+		float scale = (1.0/(256.0*1.0)*c.z/(PM[0][0]*2.0))*1.0;
+		gl_Position = PM*(c+vec4(position*vec3(vec2(scale),1.0),0.0));
+	}`,`
+	precision mediump float;
+	varying vec4 v_color;
+				
+	void main() {
+		gl_FragColor = v_color;
+	}`]);
+					
+					PC.programInfo = twgl.createProgramInfoFromProgram(gl,PC.program);
+					PC.bufferInfo = twgl.createBufferInfoFromArrays(gl,arrays);
+					PC.vertexArrayInfo = twgl.createVertexArrayInfo(gl,PC.programInfo,PC.bufferInfo );
+					
+					PC.numInstances =  PC.v.length/3;
+					
+					let PM = [
+						[1.445341,0,0,0,0,2.569496,0,0,-0.007273,0.068874,-1,-1,0,0,-0.001,0],
+						[1.447615,0,0,0,0,2.573538,0,0,-0.006206,0.043293,-1,-1,0,0,-0.001,0],
+					];
+					
+					let E = [
+						[0,0,0],
+						[-0.209436,0.445778,0.305061],
+					];
+					
+					let T = [
+						[0,0,0],
+						[-0.582933,0.522682,0.017337],
+					];
+					
+					const mul = (a,b)=>{
+						let m = [];
+						for(var n=0; n<16; n++) {
+							m.push(
+								a[((n>>2)<<2)+0]*b[ 0+(n&3)]+
+								a[((n>>2)<<2)+1]*b[ 4+(n&3)]+
+								a[((n>>2)<<2)+2]*b[ 8+(n&3)]+
+								a[((n>>2)<<2)+3]*b[12+(n&3)]
+							);
+						}
+						return m;
+					};
+					
+					const X = (t)=>{ 
+						return [
+							1.0,0,0,0,
+							0,Math.cos(t),-Math.sin(t),0,
+							0,Math.sin(t),Math.cos(t),0,
+							0,0,0,1
+						];
+					};
+					
+					const Y = (t)=>{ 
+						return [
+							Math.cos(t),0,Math.sin(t),0,
+							0,1,0,0,
+							-Math.sin(t),0,Math.cos(t),0,
+							0,0,0,1
+						];
+					};
+					
+					const Z = (t)=>{ 
+						return [
+							Math.cos(t),-Math.sin(t),0,0,
+							Math.sin(t),Math.cos(t),0,0,
+							0,0,1,0,
+							0,0,0,1
+						];
+					};
+					
+					let frame = 0;
+					const totalFrames = 120;
+										
+					const draw = ()=>{
+						
+						const wet = (Math.cos(Math.PI+Math.PI*(frame/(totalFrames>>1)))+1.0)*0.5;
+						const dry = 1.0-wet;
+						
+						const TM = mul(
+							Z(E[0][2]*dry+E[1][2]*wet),
+							mul(
+								Y(E[0][1]*dry+E[1][1]*wet),
+								X(E[0][0]*dry+E[1][0]*wet)
+							)
+						);
+						
+						TM[12] = (T[0][0]*dry)+(T[1][0]*wet);
+						TM[13] = (T[0][1]*dry)+(T[1][1]*wet);
+						TM[14] = (T[0][2]*dry)+(T[1][2]*wet);
+						
+						PC.uniforms.TM = TM;
+						
+						for(var n=0; n<16; n++) {
+							PC.uniforms.PM[n] = PM[0][n]*dry + PM[1][n]*wet;
+						}
+						
+						gl.viewport(0,0,width,height);
+						gl.enable(gl.DEPTH_TEST);
+						gl.depthFunc(gl.LEQUAL);
+						
+						gl.clearColor(0.0,0.0,0.0,1.0);
+						gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+						
+						gl.useProgram(PC.program);
+						twgl.setBuffersAndAttributes(gl,PC.programInfo,PC.bufferInfo);
+						twgl.setUniforms(PC.programInfo,PC.uniforms);
+						twgl.drawBufferInfo(gl,PC.vertexArrayInfo,gl.TRIANGLES,PC.vertexArrayInfo.numelements,0,PC.numInstances);
+						
+						if(++frame>=totalFrames) frame = 0;
+						
+						setTimeout(draw,1000.0/30.0);
+					}
+					
+					const resize = (e)=>{
+						const sx = window.innerWidth/width;
+						const sy = window.innerHeight/height;
+						if(sx<sy) {
+							Object.assign(canvas.style,{"width":"100dvw","height":"auto","margin":"auto 0"});
+						}
+						else {
+							Object.assign(canvas.style,{"width":"auto","height":"100dvh","margin":"0 auto"});
+						}
+					}
+					
+					let tid = 0;
+					window.addEventListener("resize",(e)=>{
+						if(tid) clearTimeout(tid);
+						tid = setTimeout((e)=>resize(),15);
+					});
+					
+					resize();
+					draw();
+					
+					document.body.appendChild(div);
+					
+				}
+			}
+			
+			import { PCLoader } from "./PCLoader.js";
+
+				PCLoader.load("PC.bin",(PC)=>{
+					setup(PC["PC.bin"]);
+				});
+			
+		</script>
+	</body>
+</html>
