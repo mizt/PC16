@@ -1,11 +1,7 @@
-const F32 = new Uint8Array(4);
+const U32 = new Uint32Array(1);
 const U16toF32 = (u16)=>{
-	const u32 = (u16&0x8000)<<16|((((u16>>10)&0x1F)-15+127)&0xFF)<<23|(u16&0x3FF)<<13;
-	F32[0] = u32&0xFF;
-	F32[1] = (u32>>8)&0xFF;
-	F32[2] = (u32>>16)&0xFF;
-	F32[3] = (u32>>24)&0xFF;
-	return (new Float32Array(F32.buffer))[0];
+	U32[0] = (u16&0x8000)<<16|((((u16>>10)&0x1F)-15+127)&0xFF)<<23|(u16&0x3FF)<<13;
+	return (new Float32Array(U32.buffer))[0];
 }
 
 export const PCLoader = Object.freeze({
